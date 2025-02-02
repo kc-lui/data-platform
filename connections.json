@@ -1,0 +1,11 @@
+{
+    "prod": {
+        "conn_type": "postgres",
+        "host": "localhost",
+		"database": "trade",
+        "login": "airflow",
+        "password": "airflow",
+        "port": 5432,
+        "extra": null
+    }
+}
