@@ -10,9 +10,6 @@ import pandas as pd
 import twstock.models as models
 from twstock.twse_client import TWSE
 
-name_attribute = [
-    'Date', 'Capacity', 'Volume', 'Open', 'High', 'Low', 'Close', 'Change', 'Transcation'
-]
 
 class Manager:
     def __init__(self):
@@ -23,6 +20,11 @@ class Manager:
             return float(v)
         except ValueError:
             return 0
+
+    def _convert_minguo_to_ad(self, minguo_date: str) -> str:
+        year, month, day = map(int, minguo_date.split('/'))
+        ad_year = year + 1911
+        return f"{ad_year}/{month:02d}/{day:02d}"
 
     def get_symbols(self) -> List[models.Symbol]:
         resp = self.twse.get_today_ohlcv()
@@ -44,23 +46,32 @@ class Manager:
     def get_ohlcv(self, symbol: str, start: datetime) -> List[models.DailyOHLCV]:
         resp = self.twse.get_ohlcv(symbol, start)
         logging.debug(resp)
-        ohlcv = pd.DataFrame(resp["data"])
-        logging.debug(ohlcv)
-
         ret_ohlcv = []
 
-        for _, item in ohlcv.iterrows():
+        for entry in resp['data']:
+            date_str, capacity, volume, open_price, high, low, close, change, transaction = entry
+
+            date_obj = datetime.strptime(self._convert_minguo_to_ad(date_str), "%Y/%m/%d")
+            capacity = int(capacity.replace(',', ''))
+            volume = self._to_float(volume.replace(',', ''))
+            open_price = self._to_float(open_price.replace(',', ''))
+            high = self._to_float(high.replace(',', ''))
+            low = self._to_float(low.replace(',', ''))
+            close = self._to_float(close.replace(',', ''))
+            change = self._to_float(change.replace(',', ''))
+            transaction = int(transaction.replace(',', ''))
+
             row = models.DailyOHLCV(
-                code=item.get("Code"),
-                date=item.get("Date"),
-                open=self._to_float(item.get("Open")),
-                high=self._to_float(item.get("High")),
-                low=self._to_float(item.get("Low")),
-                close=self._to_float(item.get("Close")),
-                capacity=self._to_float(item.get("Capacity")),
-                volume=self._to_float(item.get("Volume")),
-                change=self._to_float(item.get("Change")),
-                transaction=self._to_float(item.get("Transaction")),
+                code=symbol,
+                date=date_obj,
+                open=open_price,
+                high=high,
+                low=low,
+                close=close,
+                capacity=capacity,
+                volume=volume,
+                change=change,
+                transaction=transaction
             )
             ret_ohlcv.append(row)
 
@@ -138,4 +149,4 @@ if __name__ == "__main__":
     mgr = Manager()
     mgr.get_symbols()
     mgr.get_today_ohlcv()
-    mgr.get_ohlcv("0050", args.start)
+    mgr.get_ohlcv("2330", args.start)

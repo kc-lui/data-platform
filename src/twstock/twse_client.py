@@ -46,7 +46,7 @@ class TWSE:
     def get_ohlcv(self, stockNo: str, start: datetime):
         params = {
             "stockNo": stockNo,
-            "date": start.strftime("%y%m01"),
+            "date": start.strftime("%Y%m01"),
             "response": "json",
         }
 
